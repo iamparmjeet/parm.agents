@@ -66,7 +66,7 @@
       "syncDir": "",
       "syncFileName": "",
       "syncDeviceId": "",
-      "sections": "summary,heatmap,limits,capacity,trend,agents,models,projects,breakdown,hours,sessions",
+      "sections": "limits,capacity,models,agents,breakdown,summary,heatmap,trend,hours,projects,sessions",
       "heatmapWeeks": 53,
       "heatmapTint": "Foreground",
       "panelWidth": 460,
@@ -148,7 +148,7 @@
         "key": "sections",
         "type": "string",
         "label": "Sections",
-        "defaultValue": "summary,heatmap,limits,capacity,trend,agents,models,projects,breakdown,hours,sessions",
+        "defaultValue": "limits,capacity,models,agents,breakdown,summary,heatmap,trend,hours,projects,sessions",
         "description": "Comma-separated, drawn in this order; leave one out to hide it. The panel's \"Customize sections\" button edits this. Available: summary, heatmap, limits, capacity, trend, agents, models, projects, breakdown, hours, sessions."
       },
       {
