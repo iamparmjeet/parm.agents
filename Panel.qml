@@ -223,6 +223,15 @@ Panel {
     return rows
   }
 
+  function tileText(index) {
+    if (index === 0) return tr("All")
+    var p = providers[index - 1]
+    var name = shortName(p)
+    var w = bindingWindow(p)
+    if (!w) return name
+    return name + " · " + Math.round(w.percent * 100) + "%"
+  }
+
   function toggleProvider(id) {
     var src = providersDraft !== null ? providersDraft : (providersSetting || ({}))
     var next = {}
@@ -1219,9 +1228,10 @@ Panel {
           }
 
           // ---------- Focus: everything, or one agent ----------
+          // Hidden on the Limits tab: the limit tiles above do this job.
           Grid {
             id: focusSwitch
-            visible: root.providers.length > 1
+            visible: root.providers.length > 1 && (root.activeTab !== "limits" || root.editing)
             width: parent.width
             spacing: Style.spacing.sm
 
@@ -1342,6 +1352,43 @@ Panel {
                 fontSize: Style.font.bodySmall
                 verticalPadding: Style.spacing.controlPaddingY
                 onClicked: root.activeTab = modelData.id
+              }
+            }
+          }
+
+          // ---------- Limit tiles: All + one per agent with its binding % ----------
+          Grid {
+            id: limitTiles
+            visible: !root.editing && root.activeTab === "limits" && root.providers.length > 0
+            width: parent.width
+            spacing: Style.spacing.sm
+
+            readonly property int fits: Math.max(1, Math.floor((width + spacing) / (Style.space(72) + spacing)))
+            readonly property int rowCount: Math.max(1, Math.ceil(root.focusChoices.length / fits))
+            columns: Math.ceil(root.focusChoices.length / rowCount)
+            readonly property real cellWidth: Math.floor((width - spacing * (columns - 1)) / columns)
+
+            Repeater {
+              model: root.focusChoices
+
+              Button {
+                required property string modelData
+                required property int index
+
+                width: limitTiles.cellWidth
+                text: root.tileText(index)
+                selected: index === root.focusIndex
+                hasCursor: root.cursorActive && index === root.focusIndex
+                bordered: true
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                verticalPadding: Style.spacing.controlPaddingY
+                onClicked: {
+                  root.cursorActive = true
+                  root.setFocus(index)
+                }
+                onHovered: function(isHovered) { if (isHovered) root.cursorActive = true }
               }
             }
           }
