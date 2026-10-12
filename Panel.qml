@@ -4,15 +4,14 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
-import "Strings.js" as Strings
 
 // One page for every agent. The sections stack in the order the `sections`
 // setting lists them; the chip row narrows the same page to a single agent
 // instead of switching to a different one.
 Panel {
   id: root
-  moduleName: "beforeugone.agents"
-  ipcTarget: "beforeugone.agents"
+  moduleName: "parm.agents"
+  ipcTarget: "parm.agents"
   manageIpc: false
 
   readonly property color foreground: bar ? bar.foreground : Color.foreground
@@ -45,7 +44,7 @@ Panel {
   // ---------------------------------------------------------------- settings
 
   // The id this widget is configured under in shell.json.
-  readonly property string widgetId: "beforeugone.agents"
+  readonly property string widgetId: "parm.agents"
   readonly property var knownSections: ["summary", "heatmap", "limits", "capacity", "trend", "agents", "models", "projects", "breakdown", "hours", "sessions"]
   readonly property var sectionTitles: ({
     summary: tr("Summary"), heatmap: tr("Activity calendar"), limits: tr("Limits"), capacity: tr("Plan capacity"), trend: tr("Trend"),
@@ -125,42 +124,84 @@ Panel {
     saveSections.running = true
   }
 
-  // ---------------------------------------------------------------- language
+  // ---------------------------------------------------------------- providers
   //
-  // The page is written in English and Strings.js carries the Chinese. Every
-  // binding that reaches tr() re-runs when the language flips, so the switch
-  // in the hero changes the open page in place.
+  // Hide Pi, OpenCode, etc. from the same Customize area below: each toggle
+  // writes the whole `providers` object, so a hidden agent stays hidden
+  // across restarts. Missing entry means enabled.
 
-  readonly property var languageChoices: [["English", "EN"], ["Chinese", "中"]]
-  // Like the sections draft: a click shows at once and leads the setting
-  // until shell.json has caught up with it.
-  property string languageDraft: ""
-  property string languageWritten: ""
-  readonly property string languageSetting: String(usage.setting("language", "English"))
-  onLanguageSettingChanged: if (languageSetting === languageDraft) languageDraft = ""
-  readonly property bool zh: ["chinese", "zh", "中文"].indexOf((languageDraft !== "" ? languageDraft : languageSetting).toLowerCase()) >= 0
-  readonly property string language: languageChoices[zh ? 1 : 0][0]
+  readonly property var knownProviders: [
+    { id: "claude", name: "Claude Code" },
+    { id: "codex", name: "Codex" },
+    { id: "opencode", name: "OpenCode" },
+    { id: "pi", name: "Pi" },
+    { id: "hermes", name: "Hermes" },
+    { id: "gemini", name: "Gemini CLI" },
+    { id: "grok", name: "Grok" },
+    { id: "kigi", name: "Kigi" },
+    { id: "devin", name: "Devin" },
+    { id: "kimi", name: "Kimi Code" },
+    { id: "fireworks", name: "Fireworks" }
+  ]
+  property var providersDraft: null
+  property string providersWritten: ""
+  readonly property var providersSetting: usage.setting("providers", ({}))
+  onProvidersSettingChanged: {
+    if (providersDraft === null) return
+    if (JSON.stringify(providersSetting || ({})) === JSON.stringify(providersDraft)) providersDraft = null
+  }
+
+  function providerOn(id) {
+    var src = providersDraft !== null ? providersDraft : (providersSetting || ({}))
+    if (src && src[id] && src[id].enabled === false) return false
+    return true
+  }
+
+  readonly property var providerRows: {
+    // Only agents with local usage records (or an explicit toggle) get a
+    // row: Hermes, Gemini, Kigi, Devin and friends stay out until used.
+    var seen = {}
+    var aids = usage.agentIds || []
+    for (var i = 0; i < aids.length; i++) seen[String(aids[i])] = true
+    var src = providersDraft !== null ? providersDraft : (providersSetting || ({}))
+    for (var k in src) seen[String(k)] = true
+    var rows = []
+    for (var n = 0; n < knownProviders.length; n++) {
+      var id = knownProviders[n].id
+      if (seen[id]) rows.push({ id: id, name: knownProviders[n].name, on: providerOn(id) })
+    }
+    for (var u in seen) {
+      var known = false
+      for (var m = 0; m < knownProviders.length; m++) if (knownProviders[m].id === u) { known = true; break }
+      if (!known) rows.push({ id: u, name: u, on: providerOn(u) })
+    }
+    return rows
+  }
+
+  function toggleProvider(id) {
+    var src = providersDraft !== null ? providersDraft : (providersSetting || ({}))
+    var next = {}
+    for (var k in src) next[k] = src[k]
+    var on = true
+    if (next[id] && next[id].enabled === false) on = false
+    if (on) next[id] = { enabled: false }
+    else delete next[id]
+    providersDraft = next
+    providersWritten = JSON.stringify(next)
+    saveProviders.command = ["omarchy", "bar", "set", widgetId, "providers", providersWritten, "--json"]
+    saveProviders.running = true
+  }
+
+  // English only: the former EN/中 switch and its write path are gone.
+  // tr() stays as the single place display strings pass through.
 
   // Monday first, like both grids.
-  readonly property var weekdayNames: zh ? ["周一", "周二", "周三", "周四", "周五", "周六", "周日"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-  readonly property var weekdayLetters: zh ? ["一", "二", "三", "四", "五", "六", "日"] : ["M", "T", "W", "T", "F", "S", "S"]
-  readonly property var monthNames: zh ? ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
-    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  readonly property var weekdayNames: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  readonly property var weekdayLetters: ["M", "T", "W", "T", "F", "S", "S"]
+  readonly property var monthNames: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
   function tr(text) {
-    return zh && Strings.zh[text] !== undefined ? Strings.zh[text] : text
-  }
-
-  function setLanguage(name) {
-    if (name === language) return
-    languageDraft = name
-    if (!saveLanguage.running) writeLanguage()
-  }
-
-  function writeLanguage() {
-    languageWritten = languageDraft
-    saveLanguage.command = ["omarchy", "bar", "set", widgetId, "language", languageDraft]
-    saveLanguage.running = true
+    return text
   }
 
   // Status headlines arrive from the collectors in English. The help text
@@ -971,10 +1012,12 @@ Panel {
   }
 
   Process {
-    id: saveLanguage
+    id: saveProviders
     running: false
-    // A click that landed while the last write was still running goes out now.
-    onExited: if (root.languageDraft !== "" && root.languageDraft !== root.languageWritten) root.writeLanguage()
+    onExited: {
+      var current = JSON.stringify(usage.setting("providers", ({})) || ({}))
+      if (root.providersDraft !== null && current === root.providersWritten) root.providersDraft = null
+    }
   }
 
   // Cheap enough to keep running: it only re-evaluates text bindings, and a
@@ -1000,7 +1043,7 @@ Panel {
       return JSON.stringify({
         opened: root.opened, focus: root.focusId, range: root.pickedDay !== "" ? root.pickedDay : root.rangeId,
         project: root.projectFilter, cache: root.countCache,
-        sections: root.sectionOrder, language: root.language, agents: root.shown.length, tokens: root.view.tokens, sessions: root.view.sessionCount,
+        sections: root.sectionOrder, language: "English", agents: root.shown.length, tokens: root.view.tokens, sessions: root.view.sessionCount,
         capacity: root.capacityRows.length,
         indexRows: usage.cube ? usage.cube.rows.length : 0
       })
@@ -1075,31 +1118,6 @@ Panel {
             meta: root.heroSubtitle()
             foreground: root.foreground
             fontFamily: root.fontFamily
-
-            // EN / 中: the choice is saved to the `language` setting.
-            trailingControl: Component {
-              Row {
-                spacing: Style.spacing.sm
-
-                Repeater {
-                  model: root.languageChoices
-
-                  Button {
-                    required property var modelData
-
-                    width: Style.space(34)
-                    text: modelData[1]
-                    selected: modelData[0] === root.language
-                    bordered: true
-                    foreground: root.foreground
-                    fontFamily: root.fontFamily
-                    fontSize: Style.font.bodySmall
-                    verticalPadding: Style.spacing.controlPaddingY
-                    onClicked: root.setLanguage(modelData[0])
-                  }
-                }
-              }
-            }
 
             iconComponent: Component {
               Item {
@@ -1343,6 +1361,54 @@ Panel {
                     fontSize: Style.font.bodySmall
                     verticalPadding: Style.spacing.controlPaddingY
                     onClicked: root.toggleSection(editRow.modelData.name)
+                  }
+                }
+              }
+            }
+
+            Text {
+              visible: root.editing
+              width: editList.width
+              topPadding: Style.space(6)
+              text: root.tr("Agents in panel")
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+            }
+
+            Repeater {
+              model: root.providerRows
+
+              Item {
+                required property var modelData
+                required property int index
+
+                width: editList.width
+                implicitHeight: providerToggle.implicitHeight
+
+                Text {
+                  text: modelData.name
+                  color: modelData.on ? root.foreground : root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  anchors.left: parent.left
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Row {
+                  anchors.right: parent.right
+                  spacing: Style.spacing.sm
+
+                  Button {
+                    id: providerToggle
+                    width: Style.space(56)
+                    text: modelData.on ? root.tr("Hide") : root.tr("Show")
+                    bordered: true
+                    foreground: root.foreground
+                    fontFamily: root.fontFamily
+                    fontSize: Style.font.bodySmall
+                    verticalPadding: Style.spacing.controlPaddingY
+                    onClicked: root.toggleProvider(modelData.id)
                   }
                 }
               }

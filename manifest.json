@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "id": "beforeugone.agents",
-  "name": "BF-Agent-Ledger",
+  "id": "parm.agents",
+  "name": "Parm Agents",
   "version": "4.2.0",
   "author": "BeforeUgone",
   "license": "MIT",
   "homepage": "https://github.com/BeforeUgone123/BF-Agent-Ledger",
-  "description": "AI coding usage on one page: limits, a year of activity, cost at list prices, and tokens by agent, model, project, hour and session for Claude Code, Codex, OpenCode, Pi, Hermes, Gemini CLI, Grok, Kigi, Devin, Kimi Code and Fireworks. English and Chinese.",
+  "description": "AI coding usage on one page: limits, a year of activity, cost at list prices, and tokens by agent, model, project, hour and session for Claude Code, Codex, OpenCode, Pi, Hermes, Gemini CLI, Grok, Kigi, Devin, Kimi Code and Fireworks.",
   "kinds": [
     "bar-widget"
   ],
@@ -15,8 +15,8 @@
     "barWidget": "Panel.qml"
   },
   "barWidget": {
-    "displayName": "BF-Agent-Ledger",
-    "description": "One bar icon and one page for every AI coding subscription: rate-limit meters, a GitHub-style activity calendar, plan capacity, estimated cost, and a range-filtered breakdown by agent, model, project, hour and session. Sections can be reordered or hidden, and the page switches between English and Chinese.",
+    "displayName": "Parm Agents",
+    "description": "One bar icon and one page for every AI coding subscription: rate-limit meters, a GitHub-style activity calendar, plan capacity, estimated cost, and a range-filtered breakdown by agent, model, project, hour and session. Sections can be reordered or hidden.",
     "category": "AI",
     "aliases": [
       "agents",
@@ -37,28 +37,28 @@
           "enabled": true
         },
         "pi": {
-          "enabled": true
+          "enabled": false
         },
         "hermes": {
-          "enabled": true
+          "enabled": false
         },
         "gemini": {
-          "enabled": true
+          "enabled": false
         },
         "grok": {
-          "enabled": true
+          "enabled": false
         },
         "kigi": {
-          "enabled": true
+          "enabled": false
         },
         "devin": {
-          "enabled": true
+          "enabled": false
         },
         "kimi": {
-          "enabled": true
+          "enabled": false
         },
         "fireworks": {
-          "enabled": true
+          "enabled": false
         }
       },
       "refreshIntervalSec": 900,
@@ -71,8 +71,7 @@
       "heatmapTint": "Foreground",
       "panelWidth": 460,
       "listRows": 5,
-      "defaultRange": "All",
-      "language": "English"
+      "defaultRange": "All"
     },
     "schema": [
       {
@@ -174,17 +173,6 @@
         "step": 1,
         "defaultValue": 5,
         "description": "How many models, projects and sessions each list shows."
-      },
-      {
-        "key": "language",
-        "type": "enum",
-        "label": "Language",
-        "options": [
-          "English",
-          "Chinese"
-        ],
-        "defaultValue": "English",
-        "description": "The panel's language. The EN / 中 switch at the top of the panel sets this."
       }
     ]
   }
