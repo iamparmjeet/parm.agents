@@ -131,8 +131,7 @@ Panel {
   // editing is on, tabs step aside so Hide/Show feedback stays visible.
 
   readonly property var tabDefs: [
-    { id: "limits", title: tr("Limits"), sections: ["limits", "capacity"] },
-    { id: "tokens", title: tr("Tokens"), sections: ["summary", "agents", "models", "projects", "breakdown", "hours", "sessions"] },
+    { id: "limits", title: tr("Limits"), sections: ["limits", "capacity", "summary", "agents", "models", "projects", "breakdown", "hours", "sessions"] },
     { id: "activity", title: tr("Activity"), sections: ["heatmap", "trend"] }
   ]
   property string activeTab: "limits"
@@ -221,6 +220,17 @@ Panel {
       if (!known) rows.push({ id: u, name: u, on: providerOn(u) })
     }
     return rows
+  }
+
+  // Brand colors per agent, Quotatank-style. Unknown ids fall back to text.
+  function providerColor(id) {
+    var colors = {
+      claude: "#D97757", codex: "#10A37F", opencode: "#7AA2F7",
+      kimi: "#8B5CF6", grok: "#C0C5CE", fireworks: "#F5A623",
+      pi: "#9AA0A6", gemini: "#4C8DF6", hermes: "#C084FC",
+      kigi: "#9AA0A6", devin: "#9AA0A6"
+    }
+    return colors[String(id || "")] || null
   }
 
   function tileText(index) {
@@ -482,7 +492,8 @@ Panel {
           value: windows[w].percent,
           alarming: windows[w].percent >= 0.9,
           text: Math.round(windows[w].percent * 100) + "%" + (remaining > 0 ? " · " + formatDuration(remaining) : ""),
-          tip: remaining > 0 ? tr("Resets in %1").arg(formatDuration(remaining)) : ""
+          tip: remaining > 0 ? tr("Resets in %1").arg(formatDuration(remaining)) : "",
+          color: providerColor(p.providerId)
         })
       }
       var b = p.balance
@@ -496,7 +507,8 @@ Panel {
           value: ratio,
           alarming: ratio >= 0 && ratio <= 0.1,
           text: tr("%1 left").arg(formatMoney(b.remaining, b.currency)),
-          tip: balanceDetailText(b)
+          tip: balanceDetailText(b),
+          color: providerColor(p.providerId)
         })
       }
     }
@@ -827,6 +839,7 @@ Panel {
       rows.push({
         label: limitLabel(list.length, owner, title),
         share: w.share,
+        color: providerColor(w.agent),
         // The share arrives in whole percent, so the truth lies within half a
         // point either side and the estimate inherits that spread.
         spread: 0.005 / w.share,
@@ -1380,7 +1393,7 @@ Panel {
                 selected: index === root.focusIndex
                 hasCursor: root.cursorActive && index === root.focusIndex
                 bordered: true
-                foreground: root.foreground
+                foreground: index === 0 || !root.providerColor(root.focusChoices[index]) ? root.foreground : root.providerColor(root.focusChoices[index])
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
                 verticalPadding: Style.spacing.controlPaddingY
@@ -1734,6 +1747,7 @@ Panel {
           figure: root.capacityFigure(modelData)
           // The fill is how much of that allowance is already spent.
           share: modelData.share
+          fill: modelData.color ? modelData.color : root.foreground
           tip: root.capacityTooltip(modelData)
         }
       }
@@ -2037,12 +2051,13 @@ Panel {
       anchors.verticalCenter: parent.verticalCenter
       value: limitRow.entry ? limitRow.entry.value : -1
       alarming: limitRow.alarming
+      fill: limitRow.entry && limitRow.entry.color ? limitRow.entry.color : root.foreground
     }
 
     Text {
       id: limitValue
       text: limitRow.entry ? limitRow.entry.text : ""
-      color: limitRow.alarming ? root.urgent : root.foreground
+      color: limitRow.alarming ? root.urgent : (limitRow.entry && limitRow.entry.color ? limitRow.entry.color : root.foreground)
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
       font.bold: true
@@ -2163,6 +2178,7 @@ Panel {
     property string tip: ""
     property bool clickable: false
     property bool active: false
+    property color fill: root.foreground
     signal clicked()
 
     implicitHeight: barLabel.implicitHeight + Style.spacing.lg
@@ -2179,7 +2195,7 @@ Panel {
       anchors.bottom: parent.bottom
       width: parent.width * root.clamp(barRow.share, 0, 1)
       radius: Style.cornerRadius
-      color: root.alpha(root.foreground, 0.14)
+      color: root.alpha(barRow.fill, 0.14)
 
       Behavior on width {
         NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
@@ -2340,6 +2356,7 @@ Panel {
     id: meter
     property real value: -1
     property bool alarming: false
+    property color fill: root.foreground
     property real thickness: Math.max(Style.space(4), Math.round(Style.spacing.controlHeight * 0.14))
 
     implicitHeight: thickness
@@ -2357,7 +2374,7 @@ Panel {
       height: meterTrack.height
       radius: meterTrack.radius
       width: meterTrack.width * root.clamp(meter.value, 0, 1)
-      color: meter.alarming ? root.urgent : root.foreground
+      color: meter.alarming ? root.urgent : meter.fill
 
       Behavior on width {
         NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
