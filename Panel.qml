@@ -124,6 +124,51 @@ Panel {
     saveSections.running = true
   }
 
+  // ---------------------------------------------------------------- tabs
+  //
+  // Quotatank-style tabs split the long scroll: Limits, Tokens, Activity.
+  // The tab is in-memory only and always opens on Limits. While Customize
+  // editing is on, tabs step aside so Hide/Show feedback stays visible.
+
+  readonly property var tabDefs: [
+    { id: "limits", title: tr("Limits"), sections: ["limits", "capacity"] },
+    { id: "tokens", title: tr("Tokens"), sections: ["summary", "agents", "models", "projects", "breakdown", "hours", "sessions"] },
+    { id: "activity", title: tr("Activity"), sections: ["heatmap", "trend"] }
+  ]
+  property string activeTab: "limits"
+
+  function tabSections(id) {
+    for (var i = 0; i < tabDefs.length; i++)
+      if (tabDefs[i].id === id) return tabDefs[i].sections
+    return []
+  }
+
+  function tabHasSections(id) {
+    var names = tabSections(id)
+    for (var i = 0; i < names.length; i++)
+      if (sectionOrder.indexOf(names[i]) >= 0) return true
+    return false
+  }
+
+  readonly property var shownTabs: {
+    var out = []
+    for (var i = 0; i < tabDefs.length; i++)
+      if (tabHasSections(tabDefs[i].id)) out.push(tabDefs[i])
+    return out
+  }
+
+  readonly property var activeTabSections: {
+    var names = tabSections(activeTab)
+    var out = []
+    for (var i = 0; i < sectionOrder.length; i++)
+      if (names.indexOf(sectionOrder[i]) >= 0) out.push(sectionOrder[i])
+    return out
+  }
+
+  onSectionOrderChanged: {
+    if (!tabHasSections(activeTab) && shownTabs.length > 0) activeTab = shownTabs[0].id
+  }
+
   // ---------------------------------------------------------------- providers
   //
   // Hide Pi, OpenCode, etc. from the same Customize area below: each toggle
@@ -1278,9 +1323,32 @@ Panel {
             onClicked: root.projectFilter = ""
           }
 
+          // ---------- Tabs: Limits | Tokens | Activity ----------
+          Row {
+            visible: root.providers.length > 0 && root.shownTabs.length > 1
+            width: parent.width
+            spacing: Style.spacing.sm
+
+            Repeater {
+              model: root.shownTabs
+
+              Button {
+                required property var modelData
+                text: modelData.title
+                selected: modelData.id === root.activeTab
+                bordered: true
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                verticalPadding: Style.spacing.controlPaddingY
+                onClicked: root.activeTab = modelData.id
+              }
+            }
+          }
+
           // ---------- Sections, in the order the settings list them ----------
           Repeater {
-            model: root.sectionOrder
+            model: root.editing ? root.sectionOrder : root.activeTabSections
 
             Loader {
               required property string modelData
