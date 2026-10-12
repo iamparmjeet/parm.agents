@@ -280,7 +280,7 @@ Panel {
   //
   // One set of filters scopes every section below it, so the numbers agree.
 
-  readonly property var rangeChoices: [["today", tr("Today")], ["7d", tr("7d")], ["30d", tr("30d")], ["90d", tr("90d")], ["all", tr("All")]]
+  // View range follows the defaultRange setting (range chips removed).
   property string rangeId: String(usage.setting("defaultRange", "all")).toLowerCase()
   // A day picked on the calendar overrides the range until it is cleared.
   property string pickedDay: ""
@@ -1281,44 +1281,29 @@ Panel {
             }
           }
 
-          // ---------- Range: one filter row above everything it scopes ----------
+          // ---------- Cache + picked day (range chips removed) ----------
           Row {
-            id: rangeSwitch
             visible: root.providers.length > 0
             width: parent.width
             spacing: Style.spacing.sm
 
-            // A day picked on the calendar joins the row as its own chip.
-            readonly property var choices: root.pickedDay !== ""
-              ? root.rangeChoices.concat([["day", root.shortDate(root.pickedDay)]])
-              : root.rangeChoices
-            readonly property real cacheWidth: Style.space(62)
-            readonly property real cellWidth: Math.floor((width - cacheWidth - spacing * choices.length) / choices.length)
-
-            Repeater {
-              model: rangeSwitch.choices
-
-              Button {
-                required property var modelData
-
-                width: rangeSwitch.cellWidth
-                text: modelData[1]
-                selected: root.pickedDay !== "" ? modelData[0] === "day" : modelData[0] === root.rangeId
-                bordered: true
-                foreground: root.foreground
-                fontFamily: root.fontFamily
-                fontSize: Style.font.bodySmall
-                verticalPadding: Style.spacing.controlPaddingY
-                onClicked: {
-                  root.pickedDay = ""
-                  if (modelData[0] !== "day") root.rangeId = modelData[0]
-                }
-              }
+            // A day picked on the calendar, with a tap to clear it.
+            Button {
+              visible: root.pickedDay !== ""
+              width: Style.space(72)
+              text: root.shortDate(root.pickedDay)
+              selected: true
+              bordered: true
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              fontSize: Style.font.bodySmall
+              verticalPadding: Style.spacing.controlPaddingY
+              onClicked: root.pickedDay = ""
             }
 
             // On: totals count cache reads. Off: only the new work.
             Button {
-              width: rangeSwitch.cacheWidth
+              width: Style.space(62)
               text: root.tr("Cache")
               selected: root.countCache
               bordered: true
